@@ -10,7 +10,12 @@ import zipfile
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
-
+EXPECTED_COLUMNS = {
+    'bolt': {'șofer', 'câștiguri nete|lei', 'câştiguri brute (plata în numerar)|lei'},
+    'uber': {'prenumele șoferului', 'numele de familie al șoferului',
+             'câștiguri primite : câștigurile tale',
+             'câștiguri primite : sold cursă : plăți : numerar încasat'}
+}
 app = Flask(__name__)
 app.secret_key = 'secret-key-123'
 
@@ -28,7 +33,11 @@ users = {"george": User(id="george")}
 @login_manager.user_loader
 def load_user(user_id):
     return users.get(user_id)
-
+def validate_columns(df, expected, source):
+    actual = set(df.columns.str.strip().str.lower().str.replace('\xa0', ' '))
+    missing = expected - actual
+    if missing:
+        raise ValueError(f"❌ Fișierul {source.upper()} lipsesc coloanele: {', '.join(missing)}")
 def normalize_name(name):
     name = unicodedata.normalize('NFKD', str(name)).encode('ascii', 'ignore').decode()
     name = name.lower().strip().replace('-', ' ')
@@ -265,8 +274,13 @@ def logout():
 @login_required
 def upload():
     week = request.form['week']
-    bolt_df = clean_columns(pd.read_excel(request.files['bolt']), 'bolt')
-    uber_df = clean_columns(pd.read_excel(request.files['uber']), 'uber')
+    bolt_raw = pd.read_excel(request.files['bolt'])
+    validate_columns(bolt_raw, EXPECTED_COLUMNS['bolt'], 'bolt')
+    bolt_df = clean_columns(bolt_raw, 'bolt')
+
+    uber_raw = pd.read_excel(request.files['uber'])
+    validate_columns(uber_raw, EXPECTED_COLUMNS['uber'], 'uber')
+    uber_df = clean_columns(uber_raw, 'uber')
 
     combined = pd.concat([bolt_df, uber_df], ignore_index=True)
     df = combined.groupby('driver', as_index=False).sum(numeric_only=True).fillna(0)
@@ -298,7 +312,6 @@ def upload():
                            week=week,
                            summary=df.to_dict(orient='records'),
                            top3=top3.to_dict(orient='records'))
-
 @app.route('/summary/<week>')
 @login_required
 def view_summary(week):
