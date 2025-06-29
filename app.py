@@ -11,7 +11,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 EXPECTED_COLUMNS = {
-    'bolt': {'șofer', 'câștiguri nete|lei', 'câştiguri brute (plata în numerar)|lei'},
+    'bolt': {'șofer', 'câștiguri nete|lei', 'numerar încasat|lei'},
     'uber': {'prenumele șoferului', 'numele de familie al șoferului',
              'câștiguri primite : câștigurile tale',
              'câștiguri primite : sold cursă : plăți : numerar încasat'}
@@ -50,7 +50,7 @@ def clean_columns(df, source):
         df.rename(columns={
             'șofer': 'driver',
             'câștiguri nete|lei': 'bolt_net',
-            'câştiguri brute (plata în numerar)|lei': 'bolt_cash'
+            'numerar încasat|lei': 'bolt_cash'
         }, inplace=True)
         df['driver'] = df['driver'].apply(normalize_name)
         return df[['driver', 'bolt_net', 'bolt_cash']]
@@ -275,6 +275,9 @@ def logout():
 def upload():
     week = request.form['week']
     bolt_raw = pd.read_excel(request.files['bolt'])
+    print("\n🧾 RAW BOLT COLUMNS (as Python sees them):")
+    print(list(bolt_raw.columns))
+
     validate_columns(bolt_raw, EXPECTED_COLUMNS['bolt'], 'bolt')
     bolt_df = clean_columns(bolt_raw, 'bolt')
 
