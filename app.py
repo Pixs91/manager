@@ -65,7 +65,7 @@ def clean_columns(df, source):
         }, inplace=True)
         df['uber_cash'] = df['uber_cash'].abs()
         return df[['driver', 'uber_net', 'uber_cash']]
-
+    
 def save_history(df, week, top_driver=None, top_earning=None):
     folder = os.path.join('uploads', 'history', week)
     os.makedirs(folder, exist_ok=True)
@@ -120,7 +120,7 @@ def save_history(df, week, top_driver=None, top_earning=None):
             sheet.column_dimensions[get_column_letter(col)].width = max(14, len(name) + 4)
 
         total_font = Font(bold=True, color="FFFFFF")
-        total_fill = PatternFill(start_color="28a745", end_color="28a745", fill_type="solid")
+        total_fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
         last_row = export_df.shape[0] + 1
         for col in range(1, len(export_df.columns) + 1):
             cell = sheet.cell(row=last_row, column=col)
@@ -285,6 +285,26 @@ def upload():
     validate_columns(uber_raw, EXPECTED_COLUMNS['uber'], 'uber')
     uber_df = clean_columns(uber_raw, 'uber')
 
+    # ⬇️ Add this block immediately after cleaning uber_df
+    print("DEBUG: Column names:", uber_df.columns.tolist())
+
+    if 'uber_net' in uber_df.columns:
+        print("Before cleaning:", uber_df['uber_net'].head(5))
+
+        uber_df['uber_net'] = pd.to_numeric(
+            uber_df['uber_net']
+            .astype(str)
+            .str.replace(r'[^\d\.\-]', '', regex=True)
+            .str.strip(),
+            errors='coerce'
+        )
+
+        print("After cleaning:", uber_df['uber_net'].head(5))
+        print("dtype:", uber_df['uber_net'].dtype)
+        print("sum:", uber_df['uber_net'].sum())
+
+    else:
+        print("⚠️ Column 'uber_net' not found in Uber DataFrame")
     combined = pd.concat([bolt_df, uber_df], ignore_index=True)
     df = combined.groupby('driver', as_index=False).sum(numeric_only=True).fillna(0)
 
