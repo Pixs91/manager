@@ -5,7 +5,8 @@ import unicodedata
 import re
 import os
 import json
-from datetime import datetime
+import locale
+from datetime import datetime, timedelta
 import zipfile
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -335,6 +336,28 @@ def upload():
                            week=week,
                            summary=df.to_dict(orient='records'),
                            top3=top3.to_dict(orient='records'))
+import locale
+from datetime import datetime, timedelta
+
+@app.route('/summary')
+@login_required
+def summary():
+    # Set Romanian locale
+    try:
+        locale.setlocale(locale.LC_TIME, 'ro_RO.UTF-8')  # On Unix/Linux
+    except locale.Error:
+        locale.setlocale(locale.LC_TIME, 'Romanian_Romania')  # On Windows
+
+    # Calculate previous week's Monday–Sunday
+    today = datetime.today()
+    start_of_last_week = today - timedelta(days=today.weekday() + 7)
+    end_of_last_week = start_of_last_week + timedelta(days=6)
+
+    # Format in Romanian
+    week_label = f"{start_of_last_week.strftime('%d %B')} – {end_of_last_week.strftime('%d %B')}"
+
+    # Now pass week_label to your template
+    return render_template('summary.html', week_label=week_label,)
 @app.route('/summary/<week>')
 @login_required
 def view_summary(week):
