@@ -42,6 +42,8 @@ def validate_columns(df, expected, source):
 def normalize_name(name):
     name = unicodedata.normalize('NFKD', str(name)).encode('ascii', 'ignore').decode()
     name = name.lower().strip().replace('-', ' ')
+    name = name.replace('irinel samuila', 'irinel samoila')
+    name = name.replace('raul druga', 'andrei druga raul')
     name = re.sub(r'\s+', ' ', name)
     return ' '.join(sorted(name.split())).title()
 
